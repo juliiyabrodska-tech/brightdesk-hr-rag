@@ -1,0 +1,8 @@
+google-generativeai
+PyPDF2
+gradio
+pandas
+numpy
+nltk
+slack_bolt
+slack_sdk
