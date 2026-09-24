@@ -6,7 +6,7 @@ A retrieval-augmented chatbot that lets employees ask HR questions in plain lang
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/juliiyabrodska-tech/brightdesk-hr-rag/blob/main/Brightdesk_HR_RAG_demo.ipynb)
 
-Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The notebook is committed with real output from an actual run, so you can also just read it here on GitHub without running anything.
+Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The notebook is committed with real output from two actual runs (see **Tested** below), so you can also just read it here on GitHub without running anything.
 
 ## How it works
 
@@ -41,9 +41,14 @@ answer + source document name returned, through a Gradio chat UI
 - **Retry on transient errors** — Gemini API calls retry automatically on rate limits / temporary overload (503/429) instead of failing silently
 - **Optional Slack demo** — a one-off Socket Mode bot (see the last section of the notebook) that answers questions in a single designated Slack channel, for demonstration purposes
 
-## Status
+## Tested
 
-The pipeline logic (chunking, embedding, retrieval, query expansion, grounded generation) has been exercised during development against all four policy docs, in English and Ukrainian, including a negative case with no matching policy. This repo's notebook does not yet have a saved, clean end-to-end run committed with it — run it yourself via the Colab badge above, or check back here once a full run has been captured and committed.
+Run end-to-end (chunking -> embedding -> retrieval -> query expansion -> grounded generation) on `gemini-3.5-flash-lite`, with the real output committed in the notebook:
+
+- **Positive case** (`"Скільки днів відпустки на рік?"`) -- correctly retrieved and cited `Leave and Vacation Policy`, answered "24 календарні дні на рік" (matches the source document).
+- **Negative case** (`"А чи є курси німецької?"`) -- correctly reported no matching policy exists, instead of guessing an answer.
+
+Note on the free tier: Google's Gemini free tier enforces a low per-minute request cap (the account used for this demo hit `limit: 5` requests/minute on `gemini-3.5-flash`). Since query expansion generates 2-3 rephrasings plus a final generation call, a single question can use up several of those requests. The notebook's `call_with_retry` helper retries transient `503`/`429` errors automatically; a sustained cap needs either a short wait or switching the `MODEL_NAME` constant to a lighter model.
 
 ## Running it yourself
 
