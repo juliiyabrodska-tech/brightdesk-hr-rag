@@ -6,17 +6,21 @@ A retrieval-augmented chatbot that lets employees ask HR questions in plain lang
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/juliiyabrodska-tech/brightdesk-hr-rag/blob/main/Brightdesk_HR_RAG_demo.ipynb)
 
-Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The notebook is committed with real output from actual runs (see **Tested** below), so you can also just read it here on GitHub without running anything.
+Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The core retrieval calls have real, committed output right in the notebook, so you can read those without running anything; the Gradio and Slack paths are documented with the screenshots below instead (see **Tested**).
 
 ## Screenshots
 
-| Gradio UI | Slack bot |
+| Gradio UI (Ukrainian) | Gradio UI (English) |
 |---|---|
-| ![Gradio UI answering a leave-policy question](screenshots/01-gradio-ui-leave-policy.png) | ![Slack bot answering the same question](screenshots/05-slack-bot-leave-policy.png) |
+| ![Gradio UI answering a leave-policy question in Ukrainian](screenshots/01-gradio-ui-leave-policy.png) | ![Gradio UI answering a leave-policy question in English](screenshots/06-gradio-english-vacation.png) |
 
-| Console — positive case | Console — negative case |
+| Slack bot | Console — positive case |
 |---|---|
-| ![Console output, vacation days question](screenshots/02-console-leave-policy.png) | ![Console output, question with no matching policy](screenshots/03-console-negative-case.png) |
+| ![Slack bot answering the same question](screenshots/05-slack-bot-leave-policy.png) | ![Console output, vacation days question](screenshots/02-console-leave-policy.png) |
+
+| Console — negative case |
+|---|
+| ![Console output, question with no matching policy](screenshots/03-console-negative-case.png) |
 
 ## How it works
 
@@ -44,7 +48,7 @@ answer + source document name returned, through a Gradio chat UI (or the Slack d
 
 ## Features
 
-- **Multilingual retrieval** — tested in English and Ukrainian
+- **Multilingual retrieval** — built for teams that work across languages: an international company with a bilingual team can have policies written in one language and still get accurate answers in another. Tested with both an English and a Ukrainian question, both correctly grounded in the same (English-language) source policy — see **Tested**
 - **Query expansion** — differently-worded questions ("How many vacation days do I get?" vs "What's the PTO policy?") still find the right document
 - **Grounded answers only** — every answer is generated from retrieved text, with the source document cited, not a free-floating model guess
 - **Chunking with overlap** — answers aren't cut off mid-context
@@ -55,7 +59,8 @@ answer + source document name returned, through a Gradio chat UI (or the Slack d
 
 Run end-to-end (chunking -> embedding -> retrieval -> query expansion -> grounded generation) on `gemini-3.5-flash-lite`, with the real output committed in the notebook:
 
-- **Positive case** (`"Скільки днів відпустки на рік?"`) -- correctly retrieved and cited `Leave and Vacation Policy`, answered "24 календарні дні на рік" (matches the source document). Confirmed through three separate paths: the plain console call (`rag_implement`), the chunked retrieval path the Gradio UI actually calls (`rag_implement_chunked`), and the Slack bot (`rag_implement_chunked_extended`, adds query expansion) — see screenshots above.
+- **Positive case, Ukrainian** (`"Скільки днів відпустки на рік?"`) -- correctly retrieved and cited `Leave and Vacation Policy`, answered "24 календарні дні на рік" (matches the source document). Confirmed through three separate paths: the plain console call (`rag_implement`), the chunked retrieval path the Gradio UI actually calls (`rag_implement_chunked`), and the Slack bot (`rag_implement_chunked_extended`, adds query expansion) — see screenshots above.
+- **Positive case, English** (`"How many vacation days do I get per year, and can I carry them over?"`) -- via the Gradio UI (`rag_implement_chunked`): correctly answered 24 calendar days (2 per month worked) and correctly added the carry-over rule (up to 5 days into the next year) — both details pulled from the same `Leave and Vacation Policy` document, not invented.
 - **Negative case** (`"А чи є курси німецької?"`) -- correctly reported no matching policy exists, instead of guessing an answer (console, via `rag_implement`).
 
 Note on the free tier: Google's Gemini free tier enforces a low per-minute request cap (the account used for this demo hit `limit: 5` requests/minute on `gemini-3.5-flash`, and `limit: 20` on later runs). Since query expansion generates 2-3 rephrasings plus a final generation call, a single question can use up several of those requests — asking the Slack bot or Gradio UI several questions in a row can hit that cap. The notebook's `call_with_retry` helper retries transient `503`/`429` errors automatically, and the Slack bot replies with a plain "try again in a moment" message instead of crashing when that happens; a sustained cap needs either a short wait or switching the `MODEL_NAME` constant to a lighter model.
