@@ -6,7 +6,17 @@ A retrieval-augmented chatbot that lets employees ask HR questions in plain lang
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/juliiyabrodska-tech/brightdesk-hr-rag/blob/main/Brightdesk_HR_RAG_demo.ipynb)
 
-Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The notebook is committed with real output from two actual runs (see **Tested** below), so you can also just read it here on GitHub without running anything.
+Click the badge above to open and run the notebook yourself (you'll need your own free Gemini API key — see **Running it yourself** below). The notebook is committed with real output from actual runs (see **Tested** below), so you can also just read it here on GitHub without running anything.
+
+## Screenshots
+
+| Gradio UI | Slack bot |
+|---|---|
+| ![Gradio UI answering a leave-policy question](screenshots/01-gradio-ui-leave-policy.png) | ![Slack bot answering the same question](screenshots/05-slack-bot-leave-policy.png) |
+
+| Console — positive case | Console — negative case |
+|---|---|
+| ![Console output, vacation days question](screenshots/02-console-leave-policy.png) | ![Console output, question with no matching policy](screenshots/03-console-negative-case.png) |
 
 ## How it works
 
@@ -29,7 +39,7 @@ most relevant chunks retrieved by cosine similarity
 Gemini generates an answer restricted to the retrieved context only
         |
         v
-answer + source document name returned, through a Gradio chat UI
+answer + source document name returned, through a Gradio chat UI (or the Slack demo below)
 ```
 
 ## Features
@@ -39,16 +49,16 @@ answer + source document name returned, through a Gradio chat UI
 - **Grounded answers only** — every answer is generated from retrieved text, with the source document cited, not a free-floating model guess
 - **Chunking with overlap** — answers aren't cut off mid-context
 - **Retry on transient errors** — Gemini API calls retry automatically on rate limits / temporary overload (503/429) instead of failing silently
-- **Optional Slack demo** — a one-off Socket Mode bot (see the last section of the notebook) that answers questions in a single designated Slack channel, for demonstration purposes
+- **Slack demo** — a one-off Socket Mode bot (last section of the notebook) that answers questions in a single designated Slack channel; confirmed working (see **Tested** and the screenshot above), but it's a temporary demo you run yourself, not a deployed service — see the note in **Tested**
 
 ## Tested
 
 Run end-to-end (chunking -> embedding -> retrieval -> query expansion -> grounded generation) on `gemini-3.5-flash-lite`, with the real output committed in the notebook:
 
-- **Positive case** (`"Скільки днів відпустки на рік?"`) -- correctly retrieved and cited `Leave and Vacation Policy`, answered "24 календарні дні на рік" (matches the source document).
-- **Negative case** (`"А чи є курси німецької?"`) -- correctly reported no matching policy exists, instead of guessing an answer.
+- **Positive case** (`"Скільки днів відпустки на рік?"`) -- correctly retrieved and cited `Leave and Vacation Policy`, answered "24 календарні дні на рік" (matches the source document). Confirmed through three separate paths: the plain console call (`rag_implement`), the chunked retrieval path the Gradio UI actually calls (`rag_implement_chunked`), and the Slack bot (`rag_implement_chunked_extended`, adds query expansion) — see screenshots above.
+- **Negative case** (`"А чи є курси німецької?"`) -- correctly reported no matching policy exists, instead of guessing an answer (console, via `rag_implement`).
 
-Note on the free tier: Google's Gemini free tier enforces a low per-minute request cap (the account used for this demo hit `limit: 5` requests/minute on `gemini-3.5-flash`). Since query expansion generates 2-3 rephrasings plus a final generation call, a single question can use up several of those requests. The notebook's `call_with_retry` helper retries transient `503`/`429` errors automatically; a sustained cap needs either a short wait or switching the `MODEL_NAME` constant to a lighter model.
+Note on the free tier: Google's Gemini free tier enforces a low per-minute request cap (the account used for this demo hit `limit: 5` requests/minute on `gemini-3.5-flash`, and `limit: 20` on later runs). Since query expansion generates 2-3 rephrasings plus a final generation call, a single question can use up several of those requests — asking the Slack bot or Gradio UI several questions in a row can hit that cap. The notebook's `call_with_retry` helper retries transient `503`/`429` errors automatically, and the Slack bot replies with a plain "try again in a moment" message instead of crashing when that happens; a sustained cap needs either a short wait or switching the `MODEL_NAME` constant to a lighter model.
 
 ## Running it yourself
 
@@ -56,10 +66,11 @@ Note on the free tier: Google's Gemini free tier enforces a low per-minute reque
 2. Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 3. In Colab: Secrets (key icon in the sidebar) -> add `GOOGLE_API_KEY` with that value, enable notebook access
 4. Runtime -> Run all
+5. Optional: to also try the Slack demo, see the setup instructions in the notebook's last section
 
 ## Tech
 
-Google Gemini (embeddings + generation) - Python - pandas / numpy - Gradio - (optional) Slack Bolt for the Slack demo
+Google Gemini (embeddings + generation) - Python - pandas / numpy - Gradio - Slack Bolt (Socket Mode, for the Slack demo)
 
 ## Project structure
 
@@ -67,6 +78,7 @@ Google Gemini (embeddings + generation) - Python - pandas / numpy - Gradio - (op
 .
 |-- Brightdesk_HR_RAG_demo.ipynb   # main notebook, runs end-to-end
 |-- docs/                          # synthetic HR policy documents (source data)
+|-- screenshots/                   # portfolio screenshots (Gradio, Slack, console runs, repo)
 |-- requirements.txt
 |-- LICENSE
 ```
@@ -75,4 +87,4 @@ Google Gemini (embeddings + generation) - Python - pandas / numpy - Gradio - (op
 
 - Retrieval is a custom in-memory cosine-similarity search (numpy/pandas), not a dedicated vector database — fine at this scale, would swap in something like Chroma or pgvector for a larger document set
 - No fine-tuning — this is prompt-grounded RAG
-- Runs in Colab, not deployed as a persistent service
+- Runs in Colab, not deployed as a persistent service; the Slack bot is a temporary Socket Mode connection you start and stop yourself, not a hosted bot
